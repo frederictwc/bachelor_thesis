@@ -1,0 +1,58 @@
+Define RHOR 1000.0
+Define MUR 100.0
+Define Ar 14.0
+Define Bo 1
+Define WIDTH 1
+Define MINLEVEL 4
+Define MIDLEVEL (MINLEVEL+2)
+Define MAXLEVEL (MIDLEVEL+2)
+Define VAR(T,min,max) (min + CLAMP(T,0,1)*(max-min))
+Define RHO(T) VAR(T,1.0,1.0/RHOR)
+Define MUHARM(T)  1.0/VAR(T,1.0,MUR)
+Define MAXTIME 10000
+Define U0 1
+
+
+1 1 GfsSimulation GfsBox GfsGEdge { x = 0 } {
+
+    Global { 
+    Include ini_t_bub.h 
+    }
+
+    Time { end = MAXTIME }
+    PhysicalParams { L = WIDTH }
+    Refine 6            
+
+    VariableTracerVOFHeight T 
+    VariableFiltered  T1 T 1
+    VariableCurvature K T Kmax
+
+    InitFraction T (ini_t(x, y))
+    PhysicalParams { alpha = 1.0/RHO(T1) }
+    Source {} U 1/(RHO(T1))
+    SourceViscosity MUHARM(T1)/Ar
+    SourceTension T 1.0/Bo K
+    
+    AdaptGradient  { istep = 1 } { 
+	maxlevel = MAXLEVEL
+	minlevel = MINLEVEL 
+    cmax = 1e-2
+    } T1
+
+    AdaptVorticity { istep = 1 } { 
+	maxlevel = MIDLEVEL
+    minlevel = MINLEVEL
+	cmax = 1e-2 
+    cfactor = 1
+    }
+
+    SpatialSum { step = .1 } bubble_volume T
+    
+    GfsOutputSimulation { step = 0.01 } stdout
+
+    
+}
+
+
+GfsBox {top = Boundary {BcDirichlet U 0 BcDirichlet V 0 } bottom = Boundary { BcDirichlet U 0 BcDirichlet V 0}}
+1 1 right
